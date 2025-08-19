@@ -9,6 +9,7 @@ import Home from "./pages/Home";
 import Search from "./pages/Search";
 import Library from "./pages/Library";
 import Profile from "./pages/Profile";
+import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
@@ -45,6 +46,7 @@ const AppRoutes = () => (
       <Route index element={<Home />} />
       <Route path="search" element={<Search />} />
       <Route path="library" element={<Library />} />
+      <Route path="dashboard" element={<Dashboard />} />
       <Route path="profile" element={<Profile />} />
     </Route>
     <Route path="*" element={<NotFound />} />

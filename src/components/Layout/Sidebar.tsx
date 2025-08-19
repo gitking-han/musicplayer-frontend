@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, Search, Library, User, Plus, Heart } from 'lucide-react';
+import { Home, Search, Library, User, Plus, Heart, LayoutDashboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMusic } from '@/contexts/MusicContext';
 
@@ -8,6 +8,7 @@ const navigation = [
   { name: 'Home', href: '/', icon: Home },
   { name: 'Search', href: '/search', icon: Search },
   { name: 'Your Library', href: '/library', icon: Library },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
 ];
 
 const Sidebar: React.FC = () => {
