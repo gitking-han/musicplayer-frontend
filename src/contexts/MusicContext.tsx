@@ -1,0 +1,205 @@
+import React, { createContext, useContext, useReducer, useCallback } from 'react';
+
+// Types
+export interface Track {
+  id: string;
+  title: string;
+  artist: string;
+  album: string;
+  duration: number;
+  cover: string;
+  url?: string;
+}
+
+export interface Playlist {
+  id: string;
+  name: string;
+  description: string;
+  cover: string;
+  tracks: Track[];
+  isLiked?: boolean;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string;
+  playlists: Playlist[];
+}
+
+interface MusicState {
+  currentTrack: Track | null;
+  isPlaying: boolean;
+  queue: Track[];
+  currentIndex: number;
+  volume: number;
+  isMuted: boolean;
+  isShuffled: boolean;
+  repeatMode: 'none' | 'one' | 'all';
+  user: User | null;
+  isAuthenticated: boolean;
+}
+
+type MusicAction =
+  | { type: 'PLAY_TRACK'; payload: { track: Track; queue?: Track[] } }
+  | { type: 'TOGGLE_PLAY' }
+  | { type: 'NEXT_TRACK' }
+  | { type: 'PREVIOUS_TRACK' }
+  | { type: 'SET_VOLUME'; payload: number }
+  | { type: 'TOGGLE_MUTE' }
+  | { type: 'TOGGLE_SHUFFLE' }
+  | { type: 'SET_REPEAT_MODE'; payload: 'none' | 'one' | 'all' }
+  | { type: 'LOGIN'; payload: User }
+  | { type: 'LOGOUT' }
+  | { type: 'ADD_TO_PLAYLIST'; payload: { playlistId: string; track: Track } };
+
+const initialState: MusicState = {
+  currentTrack: null,
+  isPlaying: false,
+  queue: [],
+  currentIndex: 0,
+  volume: 0.7,
+  isMuted: false,
+  isShuffled: false,
+  repeatMode: 'none',
+  user: null,
+  isAuthenticated: false,
+};
+
+const musicReducer = (state: MusicState, action: MusicAction): MusicState => {
+  switch (action.type) {
+    case 'PLAY_TRACK':
+      return {
+        ...state,
+        currentTrack: action.payload.track,
+        queue: action.payload.queue || [action.payload.track],
+        currentIndex: 0,
+        isPlaying: true,
+      };
+    case 'TOGGLE_PLAY':
+      return { ...state, isPlaying: !state.isPlaying };
+    case 'NEXT_TRACK':
+      const nextIndex = state.currentIndex + 1;
+      if (nextIndex < state.queue.length) {
+        return {
+          ...state,
+          currentIndex: nextIndex,
+          currentTrack: state.queue[nextIndex],
+        };
+      }
+      return state;
+    case 'PREVIOUS_TRACK':
+      const prevIndex = state.currentIndex - 1;
+      if (prevIndex >= 0) {
+        return {
+          ...state,
+          currentIndex: prevIndex,
+          currentTrack: state.queue[prevIndex],
+        };
+      }
+      return state;
+    case 'SET_VOLUME':
+      return { ...state, volume: action.payload, isMuted: false };
+    case 'TOGGLE_MUTE':
+      return { ...state, isMuted: !state.isMuted };
+    case 'TOGGLE_SHUFFLE':
+      return { ...state, isShuffled: !state.isShuffled };
+    case 'SET_REPEAT_MODE':
+      return { ...state, repeatMode: action.payload };
+    case 'LOGIN':
+      return { ...state, user: action.payload, isAuthenticated: true };
+    case 'LOGOUT':
+      return { ...state, user: null, isAuthenticated: false };
+    default:
+      return state;
+  }
+};
+
+const MusicContext = createContext<{
+  state: MusicState;
+  dispatch: React.Dispatch<MusicAction>;
+  playTrack: (track: Track, queue?: Track[]) => void;
+  togglePlay: () => void;
+  nextTrack: () => void;
+  previousTrack: () => void;
+  setVolume: (volume: number) => void;
+  toggleMute: () => void;
+  toggleShuffle: () => void;
+  setRepeatMode: (mode: 'none' | 'one' | 'all') => void;
+  login: (user: User) => void;
+  logout: () => void;
+} | null>(null);
+
+export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [state, dispatch] = useReducer(musicReducer, initialState);
+
+  const playTrack = useCallback((track: Track, queue?: Track[]) => {
+    dispatch({ type: 'PLAY_TRACK', payload: { track, queue } });
+  }, []);
+
+  const togglePlay = useCallback(() => {
+    dispatch({ type: 'TOGGLE_PLAY' });
+  }, []);
+
+  const nextTrack = useCallback(() => {
+    dispatch({ type: 'NEXT_TRACK' });
+  }, []);
+
+  const previousTrack = useCallback(() => {
+    dispatch({ type: 'PREVIOUS_TRACK' });
+  }, []);
+
+  const setVolume = useCallback((volume: number) => {
+    dispatch({ type: 'SET_VOLUME', payload: volume });
+  }, []);
+
+  const toggleMute = useCallback(() => {
+    dispatch({ type: 'TOGGLE_MUTE' });
+  }, []);
+
+  const toggleShuffle = useCallback(() => {
+    dispatch({ type: 'TOGGLE_SHUFFLE' });
+  }, []);
+
+  const setRepeatMode = useCallback((mode: 'none' | 'one' | 'all') => {
+    dispatch({ type: 'SET_REPEAT_MODE', payload: mode });
+  }, []);
+
+  const login = useCallback((user: User) => {
+    dispatch({ type: 'LOGIN', payload: user });
+  }, []);
+
+  const logout = useCallback(() => {
+    dispatch({ type: 'LOGOUT' });
+  }, []);
+
+  return (
+    <MusicContext.Provider
+      value={{
+        state,
+        dispatch,
+        playTrack,
+        togglePlay,
+        nextTrack,
+        previousTrack,
+        setVolume,
+        toggleMute,
+        toggleShuffle,
+        setRepeatMode,
+        login,
+        logout,
+      }}
+    >
+      {children}
+    </MusicContext.Provider>
+  );
+};
+
+export const useMusic = () => {
+  const context = useContext(MusicContext);
+  if (!context) {
+    throw new Error('useMusic must be used within a MusicProvider');
+  }
+  return context;
+};
