@@ -9,8 +9,8 @@ import album1 from '@/assets/album1.jpg';
 import album2 from '@/assets/album2.jpg';
 import album3 from '@/assets/album3.jpg';
 
-const Library: React.FC = () => {
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+const Library = () => {
+  const [viewMode, setViewMode] = useState('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const { state } = useMusic();
 

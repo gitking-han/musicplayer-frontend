@@ -3,13 +3,12 @@ import { Play, Heart, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useMusic } from '@/contexts/MusicContext';
-import { Track } from '@/contexts/MusicContext';
 import heroImage from '@/assets/hero-music.jpg';
 import album1 from '@/assets/album1.jpg';
 import album2 from '@/assets/album2.jpg';
 import album3 from '@/assets/album3.jpg';
 
-const Home: React.FC = () => {
+const Home = () => {
   const { playTrack } = useMusic();
 
   // Mock data
@@ -25,7 +24,7 @@ const Home: React.FC = () => {
     { id: '3', title: 'Bass Drop', artist: 'HyperBeat', album: 'Electronic Revolution', duration: 230, cover: album3 },
   ];
 
-  const handlePlayTrack = (track: Track) => {
+  const handlePlayTrack = (track) => {
     playTrack(track, recentlyPlayed);
   };
 

@@ -15,11 +15,11 @@ import { Button } from '@/components/ui/button';
 import { useMusic } from '@/contexts/MusicContext';
 import { cn } from '@/lib/utils';
 
-const MusicPlayer: React.FC = () => {
+const MusicPlayer = () => {
   const { state, togglePlay, nextTrack, previousTrack, setVolume, toggleMute, toggleShuffle, setRepeatMode } = useMusic();
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const audioRef = useRef(null);
 
   const { currentTrack, isPlaying, volume, isMuted, isShuffled, repeatMode } = state;
 
@@ -45,28 +45,28 @@ const MusicPlayer: React.FC = () => {
     }
   };
 
-  const handleSeek = (value: number[]) => {
+  const handleSeek = (value) => {
     if (audioRef.current) {
       audioRef.current.currentTime = value[0];
       setCurrentTime(value[0]);
     }
   };
 
-  const handleVolumeChange = (value: number[]) => {
+  const handleVolumeChange = (value) => {
     setVolume(value[0]);
     if (audioRef.current) {
       audioRef.current.volume = value[0];
     }
   };
 
-  const formatTime = (time: number) => {
+  const formatTime = (time) => {
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
   const handleRepeatToggle = () => {
-    const modes: Array<'none' | 'one' | 'all'> = ['none', 'one', 'all'];
+    const modes = ['none', 'one', 'all'];
     const currentIndex = modes.indexOf(repeatMode);
     const nextMode = modes[(currentIndex + 1) % modes.length];
     setRepeatMode(nextMode);

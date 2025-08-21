@@ -16,12 +16,12 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+const ProtectedRoute = ({ children }) => {
   const { state } = useMusic();
   return state.isAuthenticated ? children : <Navigate to="/login" />;
 };
 
-const PublicRoute = ({ children }: { children: React.ReactNode }) => {
+const PublicRoute = ({ children }) => {
   const { state } = useMusic();
   return !state.isAuthenticated ? children : <Navigate to="/" />;
 };

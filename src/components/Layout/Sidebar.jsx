@@ -11,7 +11,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
 ];
 
-const Sidebar: React.FC = () => {
+const Sidebar = () => {
   const location = useLocation();
   const { state } = useMusic();
 

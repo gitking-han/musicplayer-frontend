@@ -4,12 +4,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useMusic } from '@/contexts/MusicContext';
-import { Track } from '@/contexts/MusicContext';
 import album1 from '@/assets/album1.jpg';
 import album2 from '@/assets/album2.jpg';
 import album3 from '@/assets/album3.jpg';
 
-const Search: React.FC = () => {
+const Search = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const { playTrack } = useMusic();
 
@@ -29,7 +28,7 @@ const Search: React.FC = () => {
     { id: '6', name: 'Classical', color: 'bg-gradient-to-br from-indigo-400 to-purple-600' },
   ];
 
-  const handlePlayTrack = (track: Track) => {
+  const handlePlayTrack = (track) => {
     playTrack(track, searchResults);
   };
 

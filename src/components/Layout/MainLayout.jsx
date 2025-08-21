@@ -4,7 +4,7 @@ import Sidebar from './Sidebar';
 import MusicPlayer from './MusicPlayer';
 import { useMusic } from '@/contexts/MusicContext';
 
-const MainLayout: React.FC = () => {
+const MainLayout = () => {
   const { state } = useMusic();
 
   return (

@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { useMusic } from '@/contexts/MusicContext';
 
-const Profile: React.FC = () => {
+const Profile = () => {
   const { state, logout } = useMusic();
 
   // Mock user stats

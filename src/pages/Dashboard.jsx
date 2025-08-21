@@ -8,19 +8,10 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useMusic } from '@/contexts/MusicContext';
 import { useToast } from '@/hooks/use-toast';
 
-interface TrackForm {
-  title: string;
-  artist: string;
-  album: string;
-  duration: string;
-  cover: string;
-  url: string;
-}
-
-const Dashboard: React.FC = () => {
+const Dashboard = () => {
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
-  const [trackForm, setTrackForm] = useState<TrackForm>({
+  const [trackForm, setTrackForm] = useState({
     title: '',
     artist: '',
     album: '',
@@ -29,11 +20,11 @@ const Dashboard: React.FC = () => {
     url: ''
   });
 
-  const handleInputChange = (field: keyof TrackForm, value: string) => {
+  const handleInputChange = (field, value) => {
     setTrackForm(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     
     // Basic validation
