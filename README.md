@@ -1,73 +1,80 @@
-# Welcome to your Lovable project
+🎵 Music Player
 
-## Project info
+A responsive, modern music player built with React, Vite, TailwindCSS, and shadcn/ui, featuring playlists, liked songs, repeat/shuffle modes, and backend API integration.
 
-**URL**: https://lovable.dev/projects/caeacd08-2d40-4288-a2ff-a45ba739c93d
+🚀 Features
 
-## How can I edit this code?
+🎶 Upload and stream songs from backend
 
-There are several ways of editing your application.
+❤️ Like songs and manage your Liked Songs playlist
 
-**Use Lovable**
+🔁 Repeat modes: none, repeat-all, repeat-one
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/caeacd08-2d40-4288-a2ff-a45ba739c93d) and start prompting.
+🔀 Shuffle playback
 
-Changes made via Lovable will be committed automatically to this repo.
+⏯️ Play, pause, seek, next/previous track
 
-**Use your preferred IDE**
+📱 Responsive UI for desktop & mobile
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+⚡ Powered by React + Vite for fast dev experience
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+🎨 Styled with TailwindCSS & shadcn/ui components
 
-Follow these steps:
+🛠️ Tech Stack
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+Frontend: React, Vite, TypeScript
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+UI: TailwindCSS, shadcn/ui, lucide-react icons
 
-# Step 3: Install the necessary dependencies.
-npm i
+State Management: React Context API
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+Backend (API): Node.js + Express (songs endpoint)
+
+📦 Getting Started
+1. Clone the repository
+git clone https://github.com/gitking-han/musicplayer-frontend.git
+cd musicplayer-frontend
+
+2. Install dependencies
+npm install
+
+3. Run development server
 npm run dev
-```
 
-**Edit a file directly in GitHub**
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+App will be running at:
+👉 http://localhost:5173/
 
-**Use GitHub Codespaces**
+🔗 API Setup
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Make sure your backend API (songs, liked songs, etc.) is running on
+http://localhost:5000/
 
-## What technologies are used for this project?
+Example endpoint used:
 
-This project is built with:
+GET http://localhost:5000/api/songs
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+📂 Project Structure
+musicplayer-frontend/
+│── src/
+│   ├── components/      # UI components (Player, SongCard, etc.)
+│   ├── contexts/        # MusicContext (state management)
+│   ├── pages/           # Pages (Library, LikedSongs, Playlist, etc.)
+│   ├── App.tsx
+│   └── main.tsx
+│── public/
+│── package.json
+│── tailwind.config.js
+│── vite.config.ts
 
-## How can I deploy this project?
+🌍 Deployment
 
-Simply open [Lovable](https://lovable.dev/projects/caeacd08-2d40-4288-a2ff-a45ba739c93d) and click on Share -> Publish.
+Deploy easily using Vercel, Netlify, or Lovable.
 
-## Can I connect a custom domain to my Lovable project?
+For custom domains, configure DNS in your hosting provider.
 
-Yes, you can!
+📝 License
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+This project is open-source and available under the MIT License.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+✨ Enjoy your music with Music Player!
