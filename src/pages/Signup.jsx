@@ -1,25 +1,25 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Music } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card } from '@/components/ui/card';
-import { useMusic } from '@/contexts/MusicContext';
-import { useToast } from '@/hooks/use-toast';
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Eye, EyeOff, Music } from "lucide-react";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { Card } from "../components/ui/card";
+import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../hooks/use-toast";
 
 const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
+    username: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
   });
   const [isLoading, setIsLoading] = useState(false);
-  
-  const { login } = useMusic();
+
+  const { register } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -32,36 +32,35 @@ const Signup = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (formData.password !== formData.confirmPassword) {
       toast({
-        title: 'Passwords don\'t match',
-        description: 'Please make sure your passwords match.',
-        variant: 'destructive',
+        title: "Passwords don’t match",
+        description: "Please make sure both passwords are the same.",
+        variant: "destructive",
       });
       return;
     }
 
     setIsLoading(true);
+    try {
+      await register(formData.username, formData.email, formData.password);
 
-    // Mock registration
-    setTimeout(() => {
-      const mockUser = {
-        id: '1',
-        name: formData.name,
-        email: formData.email,
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${formData.name}`,
-        playlists: []
-      };
-
-      login(mockUser);
       toast({
-        title: 'Account created!',
-        description: 'Welcome to MusicStream. Start exploring music!',
+        title: "Account created!",
+        description: "Welcome to MusicStream 🎶 Please log in.",
       });
-      navigate('/');
+
+      navigate("/login");
+    } catch (err) {
+      toast({
+        title: "Signup failed",
+        description: err.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -71,7 +70,10 @@ const Signup = () => {
           {/* Logo */}
           <div className="text-center">
             <div className="flex items-center justify-center mb-4">
-              <div className="h-12 w-12 bg-gradient-primary rounded-xl flex items-center justify-center shadow-primary">
+              <div
+                style={{ backgroundColor: "hsl(var(--primary))" }}
+                className="h-12 w-12 bg-gradient-primary rounded-xl flex items-center justify-center shadow-primary"
+              >
                 <Music className="h-6 w-6 text-white" />
               </div>
             </div>
@@ -82,21 +84,26 @@ const Signup = () => {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="name" className="text-foreground">Full Name</Label>
+              <Label htmlFor="username" className="text-foreground">
+                Full Name
+              </Label>
               <Input
-                id="name"
-                name="name"
+                id="username"
+                name="username"
                 type="text"
                 placeholder="Enter your full name"
-                value={formData.name}
+                value={formData.username}
                 onChange={handleInputChange}
                 className="mt-1 bg-glass/30 border-glass-border backdrop-blur-glass"
                 required
+                disabled={isLoading}
               />
             </div>
 
             <div>
-              <Label htmlFor="email" className="text-foreground">Email</Label>
+              <Label htmlFor="email" className="text-foreground">
+                Email
+              </Label>
               <Input
                 id="email"
                 name="email"
@@ -106,26 +113,32 @@ const Signup = () => {
                 onChange={handleInputChange}
                 className="mt-1 bg-glass/30 border-glass-border backdrop-blur-glass"
                 required
+                disabled={isLoading}
               />
             </div>
 
             <div>
-              <Label htmlFor="password" className="text-foreground">Password</Label>
+              <Label htmlFor="password" className="text-foreground">
+                Password
+              </Label>
               <div className="relative mt-1">
                 <Input
                   id="password"
                   name="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   placeholder="Create a password"
                   value={formData.password}
                   onChange={handleInputChange}
                   className="pr-10 bg-glass/30 border-glass-border backdrop-blur-glass"
+                  minLength={6}
                   required
+                  disabled={isLoading}
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                   className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
                   onClick={() => setShowPassword(!showPassword)}
                 >
@@ -139,22 +152,30 @@ const Signup = () => {
             </div>
 
             <div>
-              <Label htmlFor="confirmPassword" className="text-foreground">Confirm Password</Label>
+              <Label htmlFor="confirmPassword" className="text-foreground">
+                Confirm Password
+              </Label>
               <div className="relative mt-1">
                 <Input
                   id="confirmPassword"
                   name="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
+                  type={showConfirmPassword ? "text" : "password"}
                   placeholder="Confirm your password"
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
                   className="pr-10 bg-glass/30 border-glass-border backdrop-blur-glass"
                   required
+                  disabled={isLoading}
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
+                  aria-label={
+                    showConfirmPassword
+                      ? "Hide confirm password"
+                      : "Show confirm password"
+                  }
                   className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
@@ -174,50 +195,40 @@ const Signup = () => {
                 className="mt-1 rounded border-glass-border"
                 required
               />
-              <Label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed">
-                I agree to the{' '}
+              <Label
+                htmlFor="terms"
+                className="text-sm text-muted-foreground leading-relaxed"
+              >
+                I agree to the{" "}
                 <Link to="/terms" className="text-primary hover:text-primary/80">
                   Terms of Service
-                </Link>{' '}
-                and{' '}
-                <Link to="/privacy" className="text-primary hover:text-primary/80">
+                </Link>{" "}
+                and{" "}
+                <Link
+                  to="/privacy"
+                  className="text-primary hover:text-primary/80"
+                >
                   Privacy Policy
                 </Link>
               </Label>
             </div>
 
             <Button
+              style={{ backgroundColor: "hsl(var(--primary))", color: "white" }}
               type="submit"
               className="w-full bg-gradient-primary hover:bg-primary/90 shadow-primary"
               disabled={isLoading}
             >
-              {isLoading ? 'Creating account...' : 'Create Account'}
+              {isLoading ? "Creating account..." : "Create Account"}
             </Button>
           </form>
 
-          {/* Social Signup */}
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-glass-border" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-card text-muted-foreground">Or sign up with</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Button variant="outline" className="border-glass-border bg-glass/30">
-              Google
-            </Button>
-            <Button variant="outline" className="border-glass-border bg-glass/30">
-              Spotify
-            </Button>
-          </div>
+         
 
           {/* Login Link */}
           <div className="text-center">
             <p className="text-sm text-muted-foreground">
-              Already have an account?{' '}
+              Already have an account?{" "}
               <Link
                 to="/login"
                 className="text-primary hover:text-primary/80 transition-colors font-medium"

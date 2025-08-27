@@ -1,127 +1,230 @@
-import React, { createContext, useContext, useReducer, useCallback } from 'react';
+// contexts/MusicContext.js
+import React, { createContext, useState, useContext, useEffect, useRef } from "react";
 
-const initialState = {
-  currentTrack: null,
-  isPlaying: false,
-  queue: [],
-  currentIndex: 0,
-  volume: 0.7,
-  isMuted: false,
-  isShuffled: false,
-  repeatMode: 'none',
-  user: null,
-  isAuthenticated: false,
-};
-
-const musicReducer = (state, action) => {
-  switch (action.type) {
-    case 'PLAY_TRACK':
-      return {
-        ...state,
-        currentTrack: action.payload.track,
-        queue: action.payload.queue || [action.payload.track],
-        currentIndex: 0,
-        isPlaying: true,
-      };
-    case 'TOGGLE_PLAY':
-      return { ...state, isPlaying: !state.isPlaying };
-    case 'NEXT_TRACK':
-      const nextIndex = state.currentIndex + 1;
-      if (nextIndex < state.queue.length) {
-        return {
-          ...state,
-          currentIndex: nextIndex,
-          currentTrack: state.queue[nextIndex],
-        };
-      }
-      return state;
-    case 'PREVIOUS_TRACK':
-      const prevIndex = state.currentIndex - 1;
-      if (prevIndex >= 0) {
-        return {
-          ...state,
-          currentIndex: prevIndex,
-          currentTrack: state.queue[prevIndex],
-        };
-      }
-      return state;
-    case 'SET_VOLUME':
-      return { ...state, volume: action.payload, isMuted: false };
-    case 'TOGGLE_MUTE':
-      return { ...state, isMuted: !state.isMuted };
-    case 'TOGGLE_SHUFFLE':
-      return { ...state, isShuffled: !state.isShuffled };
-    case 'SET_REPEAT_MODE':
-      return { ...state, repeatMode: action.payload };
-    case 'LOGIN':
-      return { ...state, user: action.payload, isAuthenticated: true };
-    case 'LOGOUT':
-      return { ...state, user: null, isAuthenticated: false };
-    default:
-      return state;
-  }
-};
-
-const MusicContext = createContext(null);
+const MusicContext = createContext();
 
 export const MusicProvider = ({ children }) => {
-  const [state, dispatch] = useReducer(musicReducer, initialState);
+  const [songs, setSongs] = useState([]);
+  const [playlist, setPlaylist] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(-1);
+  const [isPlaying, setIsPlaying] = useState(false);
 
-  const playTrack = useCallback((track, queue) => {
-    dispatch({ type: 'PLAY_TRACK', payload: { track, queue } });
+  const [highQuality, setHighQuality] = useState(false);
+  const [showUnplayable, setShowUnplayable] = useState(true);
+
+  // Repeat & shuffle
+  const [repeatMode, setRepeatMode] = useState("none"); // none | all | one
+  const [shuffle, setShuffle] = useState(false);
+
+  // Liked songs
+  const [likedSongs, setLikedSongs] = useState([]);
+
+  const audioRef = useRef(new Audio());
+
+  const currentSong = playlist[currentIndex] || null;
+
+  // Fetch songs from backend
+  useEffect(() => {
+    const fetchSongs = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/songs");
+        const data = await res.json();
+        setSongs(data);
+      } catch (err) {
+        console.error("Error fetching songs:", err);
+      }
+    };
+    fetchSongs();
   }, []);
 
-  const togglePlay = useCallback(() => {
-    dispatch({ type: 'TOGGLE_PLAY' });
-  }, []);
+  // Load song into audio when currentSong changes
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!currentSong) return;
 
-  const nextTrack = useCallback(() => {
-    dispatch({ type: 'NEXT_TRACK' });
-  }, []);
+    const src = currentSong.audioUrl?.startsWith("http")
+      ? currentSong.audioUrl
+      : `http://localhost:5000${currentSong.audioUrl}`;
 
-  const previousTrack = useCallback(() => {
-    dispatch({ type: 'PREVIOUS_TRACK' });
-  }, []);
+    audio.src = src;
 
-  const setVolume = useCallback((volume) => {
-    dispatch({ type: 'SET_VOLUME', payload: volume });
-  }, []);
+    if (isPlaying) {
+      audio.play().catch(() => {});
+    }
 
-  const toggleMute = useCallback(() => {
-    dispatch({ type: 'TOGGLE_MUTE' });
-  }, []);
+    return () => {
+      audio.pause();
+    };
+  }, [currentSong]);
 
-  const toggleShuffle = useCallback(() => {
-    dispatch({ type: 'TOGGLE_SHUFFLE' });
-  }, []);
+  // Play / Pause control
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio.src) return;
 
-  const setRepeatMode = useCallback((mode) => {
-    dispatch({ type: 'SET_REPEAT_MODE', payload: mode });
-  }, []);
+    if (isPlaying) audio.play().catch(() => {});
+    else audio.pause();
+  }, [isPlaying]);
 
-  const login = useCallback((user) => {
-    dispatch({ type: 'LOGIN', payload: user });
-  }, []);
+  // Handle song ended
+  useEffect(() => {
+    const audio = audioRef.current;
 
-  const logout = useCallback(() => {
-    dispatch({ type: 'LOGOUT' });
-  }, []);
+    const handleEnded = () => {
+      if (repeatMode === "one") {
+        // 🔁 Repeat same song
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
+      } else if (shuffle) {
+        // 🔀 Shuffle mode
+        const randomIndex = Math.floor(Math.random() * playlist.length);
+        setCurrentIndex(randomIndex);
+        setIsPlaying(true);
+      } else {
+        // ▶️ Normal or repeat-all
+        const nextIndex = currentIndex + 1;
+        if (nextIndex < playlist.length) {
+          setCurrentIndex(nextIndex);
+          setIsPlaying(true);
+        } else if (repeatMode === "all") {
+          setCurrentIndex(0); // restart playlist
+          setIsPlaying(true);
+        } else {
+          setIsPlaying(false); // stop
+        }
+      }
+    };
+
+    audio.addEventListener("ended", handleEnded);
+    return () => {
+      audio.removeEventListener("ended", handleEnded);
+    };
+  }, [repeatMode, shuffle, playlist, currentIndex]);
+
+  // 🔹 Core playback
+  const playSong = (song, list = songs) => {
+    const index = list.findIndex((s) => s._id === song._id);
+    setPlaylist(list);
+    setCurrentIndex(index !== -1 ? index : 0);
+    setIsPlaying(true);
+  };
+
+  // 🔹 NEW: play whole playlist
+  const playPlaylist = (list, startIndex = 0) => {
+    if (!list || list.length === 0) return;
+    setPlaylist(list);
+    setCurrentIndex(startIndex);
+    setIsPlaying(true);
+  };
+
+  const playTrack = (song) => playSong(song); // alias for clarity
+  const pauseTrack = () => setIsPlaying(false);
+  const resumeSong = () => setIsPlaying(true);
+
+  const stopSong = () => {
+    setIsPlaying(false);
+    const audio = audioRef.current;
+    audio.pause();
+    audio.currentTime = 0;
+  };
+
+  const seek = (time) => {
+    audioRef.current.currentTime = time;
+  };
+
+  const setVolume = (volume) => {
+    audioRef.current.volume = volume;
+  };
+
+  // 🔹 Next / Previous
+  const playNext = () => {
+    if (playlist.length === 0) return;
+    if (shuffle) {
+      const randomIndex = Math.floor(Math.random() * playlist.length);
+      setCurrentIndex(randomIndex);
+    } else {
+      const nextIndex = currentIndex + 1;
+      if (nextIndex < playlist.length) {
+        setCurrentIndex(nextIndex);
+      } else if (repeatMode === "all") {
+        setCurrentIndex(0);
+      }
+    }
+    setIsPlaying(true);
+  };
+
+  const playPrevious = () => {
+    if (playlist.length === 0) return;
+    if (shuffle) {
+      const randomIndex = Math.floor(Math.random() * playlist.length);
+      setCurrentIndex(randomIndex);
+    } else {
+      const prevIndex = currentIndex - 1;
+      if (prevIndex >= 0) {
+        setCurrentIndex(prevIndex);
+      } else if (repeatMode === "all") {
+        setCurrentIndex(playlist.length - 1);
+      }
+    }
+    setIsPlaying(true);
+  };
+
+  // 🔹 Toggles
+  const toggleHighQuality = () => setHighQuality((prev) => !prev);
+  const toggleShowUnplayable = () => setShowUnplayable((prev) => !prev);
+  const toggleRepeatMode = () => {
+    if (repeatMode === "none") setRepeatMode("all");
+    else if (repeatMode === "all") setRepeatMode("one");
+    else setRepeatMode("none");
+  };
+  const toggleShuffle = () => setShuffle((prev) => !prev);
+
+  // 🔹 Liked songs
+  const toggleLike = (song) => {
+    setLikedSongs((prev) => {
+      const exists = prev.find((s) => s._id === song._id);
+      if (exists) {
+        return prev.filter((s) => s._id !== song._id);
+      } else {
+        return [...prev, song];
+      }
+    });
+  };
+
+  const deleteSong = (songId) => {
+    setLikedSongs((prev) => prev.filter((s) => s._id !== songId));
+  };
 
   return (
     <MusicContext.Provider
       value={{
-        state,
-        dispatch,
+        songs,
+        playlist,
+        currentSong,
+        currentIndex,
+        isPlaying,
+        audioRef,
+        playSong,
         playTrack,
-        togglePlay,
-        nextTrack,
-        previousTrack,
+        playPlaylist, // ✅ exposed for LikedSongs page
+        pauseTrack,
+        resumeSong,
+        stopSong,
+        playNext,
+        playPrevious,
+        seek,
         setVolume,
-        toggleMute,
+        highQuality,
+        showUnplayable,
+        repeatMode,
+        shuffle,
+        likedSongs,
+        toggleLike,
+        deleteSong,
+        toggleHighQuality,
+        toggleShowUnplayable,
+        toggleRepeatMode,
         toggleShuffle,
-        setRepeatMode,
-        login,
-        logout,
       }}
     >
       {children}
@@ -129,10 +232,4 @@ export const MusicProvider = ({ children }) => {
   );
 };
 
-export const useMusic = () => {
-  const context = useContext(MusicContext);
-  if (!context) {
-    throw new Error('useMusic must be used within a MusicProvider');
-  }
-  return context;
-};
+export const useMusic = () => useContext(MusicContext);

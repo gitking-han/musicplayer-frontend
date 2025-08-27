@@ -1,86 +1,106 @@
-import React, { useState } from 'react';
-import { Plus, Upload, Music, Save, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { useMusic } from '@/contexts/MusicContext';
-import { useToast } from '@/hooks/use-toast';
+import React, { useState, useContext } from "react";
+import { Plus, X, Pencil, Trash2, Play, Pause } from "lucide-react";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
+import { useToast } from "../hooks/use-toast";
+import { SongContext } from "../contexts/SongContext";
+import { useMusic } from "../contexts/MusicContext";
 
 const Dashboard = () => {
   const { toast } = useToast();
+  const { currentSong, isPlaying, playSong, pauseSong } = useMusic();
+  const { songs, loading, addSong, updateSong, deleteSong } = useContext(SongContext);
+
   const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState(null);
   const [trackForm, setTrackForm] = useState({
-    title: '',
-    artist: '',
-    album: '',
-    duration: '',
-    cover: '',
-    url: ''
+    title: "",
+    artist: "",
+    album: "",
+    coverUrl: "",
+    audioFiles: [], // ✅ multiple files
   });
 
-  const handleInputChange = (field, value) => {
-    setTrackForm(prev => ({ ...prev, [field]: value }));
+  const resetForm = () => {
+    setTrackForm({ title: "", artist: "", album: "", coverUrl: "", audioFiles: [] });
+    setEditId(null);
+    setShowForm(false);
   };
 
-  const handleSubmit = (e) => {
+  const handleInputChange = (field, value) => {
+    setTrackForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleFileChange = (e) => {
+    setTrackForm((prev) => ({ ...prev, audioFiles: Array.from(e.target.files) })); // ✅ store all files
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Basic validation
-    if (!trackForm.title || !trackForm.artist) {
-      toast({
-        title: "Error",
-        description: "Please fill in at least title and artist",
-        variant: "destructive"
-      });
+
+    if (!trackForm.title && trackForm.audioFiles.length === 0 && !editId) {
+      toast({ title: "Error", description: "Please select at least one audio file.", variant: "destructive" });
       return;
     }
 
-    // Convert duration to seconds (assuming MM:SS format)
-    const [minutes, seconds] = trackForm.duration.split(':').map(Number);
-    const durationInSeconds = (minutes * 60) + (seconds || 0);
-
-    const newTrack = {
-      id: Date.now().toString(),
-      title: trackForm.title,
-      artist: trackForm.artist,
-      album: trackForm.album || 'Unknown Album',
-      duration: durationInSeconds || 180,
-      cover: trackForm.cover || '/placeholder.svg',
-      url: trackForm.url
-    };
-
-    // Here you would typically save to your backend/database
-    console.log('New track added:', newTrack);
-    
-    toast({
-      title: "Success",
-      description: "Track added successfully!",
-    });
-
-    // Reset form
-    setTrackForm({
-      title: '',
-      artist: '',
-      album: '',
-      duration: '',
-      cover: '',
-      url: ''
-    });
-    setShowForm(false);
+    try {
+      if (editId) {
+        // update single track
+        await updateSong(editId, {
+          title: trackForm.title,
+          artist: trackForm.artist,
+          album: trackForm.album || "Unknown Album",
+          coverUrl: trackForm.coverUrl || "/placeholder.svg",
+        });
+        toast({ title: "Updated", description: "Track updated successfully!" });
+      } else {
+        // ✅ upload multiple songs
+        for (const file of trackForm.audioFiles) {
+          await addSong({
+            title: trackForm.title || file.name,
+            artist: trackForm.artist || "Unknown Artist",
+            album: trackForm.album || "Unknown Album",
+            coverUrl: trackForm.coverUrl || "/placeholder.svg",
+            audioFile: file,
+          });
+        }
+        toast({ title: "Success", description: "Songs uploaded successfully!" });
+      }
+      resetForm();
+    } catch (err) {
+      console.error("Error saving track:", err);
+      toast({ title: "Error", description: "Failed to save track.", variant: "destructive" });
+    }
   };
 
-  const resetForm = () => {
+  const handleEdit = (song) => {
+    setEditId(song._id);
     setTrackForm({
-      title: '',
-      artist: '',
-      album: '',
-      duration: '',
-      cover: '',
-      url: ''
+      title: song.title,
+      artist: song.artist,
+      album: song.album,
+      coverUrl: song.coverUrl,
+      audioFiles: [],
     });
-    setShowForm(false);
+    setShowForm(true);
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await deleteSong(id);
+      toast({ title: "Deleted", description: "Track removed successfully!" });
+    } catch {
+      toast({ title: "Error", description: "Failed to delete track.", variant: "destructive" });
+    }
+  };
+
+  const handlePlayPause = (song) => {
+    if (currentSong?._id === song._id) {
+      isPlaying ? pauseSong() : playSong(song);
+    } else {
+      playSong(song);
+    }
   };
 
   return (
@@ -91,182 +111,77 @@ const Dashboard = () => {
           <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
           <p className="text-muted-foreground mt-1">Manage your music library</p>
         </div>
-        <Button
-          onClick={() => setShowForm(!showForm)}
-          className="bg-primary hover:bg-primary/90 shadow-primary"
-        >
+        <Button onClick={() => setShowForm(!showForm)} className="bg-primary hover:bg-primary/90 shadow-primary">
           <Plus className="h-4 w-4 mr-2" />
-          Add Track
+          {showForm ? "Close Form" : "Add Track(s)"}
         </Button>
       </div>
-
-      {/* Stats Cards */}
+{/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="bg-gradient-glass backdrop-blur-glass border-glass-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Tracks
-            </CardTitle>
-            <Music className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">1,234</div>
-            <p className="text-xs text-muted-foreground">
-              +12% from last month
-            </p>
-          </CardContent>
+          <CardHeader><CardTitle>Total Tracks</CardTitle></CardHeader>
+          <CardContent>{songs.length || "—"}</CardContent>
         </Card>
-
         <Card className="bg-gradient-glass backdrop-blur-glass border-glass-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Artists
-            </CardTitle>
-            <Upload className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">456</div>
-            <p className="text-xs text-muted-foreground">
-              +5% from last month
-            </p>
-          </CardContent>
+          <CardHeader><CardTitle>Total Albums</CardTitle></CardHeader>
+          <CardContent>{songs.length ? new Set(songs.map((s) => s.album)).size : "—"}</CardContent>
         </Card>
-
         <Card className="bg-gradient-glass backdrop-blur-glass border-glass-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Albums
-            </CardTitle>
-            <Music className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">89</div>
-            <p className="text-xs text-muted-foreground">
-              +8% from last month
-            </p>
-          </CardContent>
+          <CardHeader><CardTitle>Total Artists</CardTitle></CardHeader>
+          <CardContent>{songs.length ? new Set(songs.map((s) => s.artist)).size : "—"}</CardContent>
         </Card>
       </div>
-
-      {/* Add Track Form */}
+      
+      {/* Form */}
       {showForm && (
-        <Card className="bg-gradient-glass backdrop-blur-glass border-glass-border animate-fade-in">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-xl font-semibold text-foreground">
-              Add New Track
-            </CardTitle>
-            <Button variant="ghost" size="sm" onClick={resetForm}>
-              <X className="h-4 w-4" />
-            </Button>
+        <Card className="bg-gradient-glass backdrop-blur-glass border-glass-border">
+          <CardHeader className="flex items-center justify-between">
+            <CardTitle>{editId ? "Edit Track" : "Upload New Tracks"}</CardTitle>
+            <Button variant="ghost" size="sm" onClick={resetForm}><X className="h-4 w-4" /></Button>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Track Title *</Label>
-                  <Input
-                    id="title"
-                    placeholder="Enter track title"
-                    value={trackForm.title}
-                    onChange={(e) => handleInputChange('title', e.target.value)}
-                    className="bg-glass/20 border-glass-border"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="artist">Artist *</Label>
-                  <Input
-                    id="artist"
-                    placeholder="Enter artist name"
-                    value={trackForm.artist}
-                    onChange={(e) => handleInputChange('artist', e.target.value)}
-                    className="bg-glass/20 border-glass-border"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="album">Album</Label>
-                  <Input
-                    id="album"
-                    placeholder="Enter album name"
-                    value={trackForm.album}
-                    onChange={(e) => handleInputChange('album', e.target.value)}
-                    className="bg-glass/20 border-glass-border"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="duration">Duration (MM:SS)</Label>
-                  <Input
-                    id="duration"
-                    placeholder="e.g., 3:45"
-                    value={trackForm.duration}
-                    onChange={(e) => handleInputChange('duration', e.target.value)}
-                    className="bg-glass/20 border-glass-border"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cover">Cover Image URL</Label>
-                <Input
-                  id="cover"
-                  placeholder="Enter cover image URL"
-                  value={trackForm.cover}
-                  onChange={(e) => handleInputChange('cover', e.target.value)}
-                  className="bg-glass/20 border-glass-border"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="url">Audio File URL</Label>
-                <Input
-                  id="url"
-                  placeholder="Enter audio file URL"
-                  value={trackForm.url}
-                  onChange={(e) => handleInputChange('url', e.target.value)}
-                  className="bg-glass/20 border-glass-border"
-                />
-              </div>
-
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  Cancel
-                </Button>
-                <Button type="submit" className="bg-primary hover:bg-primary/90">
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Track
-                </Button>
-              </div>
+              <Input placeholder="Track Title (optional, will use filename if blank)" value={trackForm.title} onChange={(e) => handleInputChange("title", e.target.value)} />
+              <Input placeholder="Artist" value={trackForm.artist} onChange={(e) => handleInputChange("artist", e.target.value)} />
+              <Input placeholder="Album" value={trackForm.album} onChange={(e) => handleInputChange("album", e.target.value)} />
+              <Input placeholder="Cover Image URL" value={trackForm.coverUrl} onChange={(e) => handleInputChange("coverUrl", e.target.value)} />
+              {!editId && (
+                <Input type="file" accept="audio/*" multiple onChange={handleFileChange} /> // ✅ multiple files
+              )}
+              <Button type="submit">{editId ? "Update" : "Upload"}</Button>
             </form>
           </CardContent>
         </Card>
       )}
 
-      {/* Recent Tracks */}
+      {/* Track List */}
       <Card className="bg-gradient-glass backdrop-blur-glass border-glass-border">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold text-foreground">
-            Recent Uploads
-          </CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Recent Uploads</CardTitle></CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {[1, 2, 3].map((item) => (
-              <div key={item} className="flex items-center space-x-4 p-3 rounded-lg bg-glass/20 hover:bg-glass/30 transition-colors">
-                <div className="h-12 w-12 bg-primary/20 rounded-lg flex items-center justify-center">
-                  <Music className="h-6 w-6 text-primary" />
+          {loading ? (
+            <p>Loading...</p>
+          ) : songs.length > 0 ? (
+            songs.map((track) => (
+              <div key={track._id} className="flex items-center justify-between p-3 border-b border-muted/20">
+                <div className="flex items-center gap-3">
+                  <img src={track.coverUrl || "/placeholder.svg"} alt={track.title} className="w-12 h-12 object-cover rounded-md" />
+                  <div>
+                    <h4 className="font-medium">{track.title}</h4>
+                    <p className="text-sm text-muted-foreground">{track.artist}</p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <h4 className="font-medium text-foreground">Sample Track {item}</h4>
-                  <p className="text-sm text-muted-foreground">Sample Artist • Sample Album</p>
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  3:45
+                <div className="flex gap-2">
+                  <Button size="icon" onClick={() => handlePlayPause(track)}>
+                    {currentSong?._id === track._id && isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                  </Button>
+                  <Button size="icon" onClick={() => handleEdit(track)}><Pencil className="h-4 w-4" /></Button>
+                  <Button size="icon" onClick={() => handleDelete(track._id)}><Trash2 className="h-4 w-4" /></Button>
                 </div>
               </div>
-            ))}
-          </div>
+            ))
+          ) : (
+            <p>No tracks yet</p>
+          )}
         </CardContent>
       </Card>
     </div>

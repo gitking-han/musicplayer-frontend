@@ -1,8 +1,8 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Search, Library, User, Plus, Heart, LayoutDashboard } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useMusic } from '@/contexts/MusicContext';
+import { cn } from '../../lib/utils';
+import { useAuth } from '../../contexts/AuthContext';
 
 const navigation = [
   { name: 'Home', href: '/', icon: Home },
@@ -13,7 +13,7 @@ const navigation = [
 
 const Sidebar = () => {
   const location = useLocation();
-  const { state } = useMusic();
+  const { user } = useAuth(); // Get user from AuthContext
 
   return (
     <div className="h-full w-64 bg-gradient-glass backdrop-blur-glass border-r border-glass-border flex flex-col">
@@ -58,8 +58,9 @@ const Sidebar = () => {
         </div>
 
         <div className="space-y-2">
+          {/* Liked Songs */}
           <NavLink
-            to="/liked"
+            to="/likedsongs"
             className="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-muted-foreground hover:text-foreground hover:bg-glass/50 transition-all duration-300"
           >
             <div className="mr-3 h-8 w-8 bg-gradient-primary rounded-md flex items-center justify-center">
@@ -69,14 +70,14 @@ const Sidebar = () => {
           </NavLink>
 
           {/* User Playlists */}
-          {state.user?.playlists?.map((playlist) => (
+          {user?.playlists?.map((playlist) => (
             <NavLink
               key={playlist.id}
               to={`/playlist/${playlist.id}`}
               className="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-muted-foreground hover:text-foreground hover:bg-glass/50 transition-all duration-300"
             >
               <img
-                src={playlist.cover}
+                src={playlist.cover || '/placeholder.svg'}
                 alt={playlist.name}
                 className="mr-3 h-8 w-8 rounded-md object-cover"
               />

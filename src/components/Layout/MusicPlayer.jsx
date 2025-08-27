@@ -1,200 +1,166 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Play, 
-  Pause, 
-  SkipBack, 
-  SkipForward, 
-  Shuffle, 
-  Repeat, 
+import React, { useState, useEffect } from "react";
+import {
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  Heart,
   Volume2,
   VolumeX,
-  Heart
-} from 'lucide-react';
-import { Slider } from '@/components/ui/slider';
-import { Button } from '@/components/ui/button';
-import { useMusic } from '@/contexts/MusicContext';
-import { cn } from '@/lib/utils';
+  Repeat,
+  Repeat1,
+  Shuffle,
+} from "lucide-react";
+import { Slider } from "components/ui/slider";
+import { Button } from "components/ui/button";
+import { useMusic } from "contexts/MusicContext";
 
 const MusicPlayer = () => {
-  const { state, togglePlay, nextTrack, previousTrack, setVolume, toggleMute, toggleShuffle, setRepeatMode } = useMusic();
+  const {
+    currentSong,
+    isPlaying,
+    playSong,
+    pauseTrack,
+    audioRef,
+    seek,
+    setVolume,
+    playNext,
+    playPrevious,
+    repeatMode,
+    shuffle,
+    toggleRepeatMode,
+    toggleShuffle,
+    likedSongs,
+    toggleLike,
+  } = useMusic();
+
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const audioRef = useRef(null);
+  const [volume, setLocalVolume] = useState(1);
+  const [isMuted, setIsMuted] = useState(false);
 
-  const { currentTrack, isPlaying, volume, isMuted, isShuffled, repeatMode } = state;
+  if (!currentSong) return null;
 
+  // ✅ check if current song is liked
+  const isLiked = likedSongs.some((s) => s._id === currentSong._id);
+
+  // Update current time & duration
   useEffect(() => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.play();
-      } else {
-        audioRef.current.pause();
-      }
-    }
-  }, [isPlaying, currentTrack]);
+    const audio = audioRef.current;
+    if (!audio) return;
 
-  const handleTimeUpdate = () => {
-    if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
-    }
+    const timeUpdate = () => setCurrentTime(audio.currentTime);
+    const loadedMeta = () => setDuration(audio.duration || 0);
+
+    audio.addEventListener("timeupdate", timeUpdate);
+    audio.addEventListener("loadedmetadata", loadedMeta);
+
+    return () => {
+      audio.removeEventListener("timeupdate", timeUpdate);
+      audio.removeEventListener("loadedmetadata", loadedMeta);
+    };
+  }, [currentSong]);
+
+  const formatTime = (time) => {
+    if (isNaN(time)) return "0:00";
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
-  const handleLoadedMetadata = () => {
-    if (audioRef.current) {
-      setDuration(audioRef.current.duration);
-    }
+  const handlePlayPause = () => {
+    isPlaying ? pauseTrack() : playSong(currentSong);
   };
 
   const handleSeek = (value) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = value[0];
-      setCurrentTime(value[0]);
-    }
+    seek(value[0]);
+    setCurrentTime(value[0]);
   };
 
   const handleVolumeChange = (value) => {
+    setLocalVolume(value[0]);
     setVolume(value[0]);
-    if (audioRef.current) {
-      audioRef.current.volume = value[0];
-    }
+    if (value[0] > 0) setIsMuted(false);
   };
 
-  const formatTime = (time) => {
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  const toggleMute = () => {
+    setIsMuted((prev) => !prev);
+    setVolume(isMuted ? volume : 0);
   };
 
-  const handleRepeatToggle = () => {
-    const modes = ['none', 'one', 'all'];
-    const currentIndex = modes.indexOf(repeatMode);
-    const nextMode = modes[(currentIndex + 1) % modes.length];
-    setRepeatMode(nextMode);
-  };
-
-  if (!currentTrack) {
-    return null;
-  }
+  const coverSrc = currentSong.coverUrl || "/placeholder.svg";
 
   return (
     <div className="h-20 bg-gradient-glass backdrop-blur-glass border-t border-glass-border px-4 flex items-center justify-between">
-      {/* Hidden audio element */}
-      <audio
-        ref={audioRef}
-        src={currentTrack.url}
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={handleLoadedMetadata}
-        onEnded={nextTrack}
-      />
-
       {/* Track Info */}
       <div className="flex items-center w-1/4 min-w-0">
         <img
-          src={currentTrack.cover}
-          alt={currentTrack.album}
+          src={coverSrc}
+          alt={currentSong.title}
           className="h-14 w-14 rounded-lg object-cover shadow-lg"
         />
         <div className="ml-3 min-w-0 flex-1">
           <h4 className="text-sm font-semibold text-foreground truncate">
-            {currentTrack.title}
+            {currentSong.title}
           </h4>
           <p className="text-xs text-muted-foreground truncate">
-            {currentTrack.artist}
+            {currentSong.artist}
           </p>
         </div>
-        <Button variant="ghost" size="sm" className="ml-2 text-muted-foreground hover:text-primary">
-          <Heart className="h-4 w-4" />
+        {/* ❤️ Like Button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className={`ml-2 ${isLiked ? "text-red-500" : ""}`}
+          onClick={() => toggleLike(currentSong)}
+        >
+          <Heart className="h-4 w-4 fill-current" />
         </Button>
       </div>
 
       {/* Controls */}
       <div className="flex flex-col items-center w-1/2 max-w-md">
         <div className="flex items-center space-x-2 mb-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleShuffle}
-            className={cn(
-              'text-muted-foreground hover:text-foreground',
-              isShuffled && 'text-primary'
-            )}
-          >
+          <Button onClick={toggleShuffle} variant={shuffle ? "default" : "ghost"}>
             <Shuffle className="h-4 w-4" />
           </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={previousTrack}
-            className="text-muted-foreground hover:text-foreground"
-          >
+          <Button onClick={playPrevious} variant="ghost">
             <SkipBack className="h-4 w-4" />
           </Button>
-
-          <Button
-            variant="default"
-            size="sm"
-            onClick={togglePlay}
-            className="h-8 w-8 rounded-full bg-primary hover:bg-primary/90 shadow-primary"
-          >
-            {isPlaying ? (
-              <Pause className="h-4 w-4" />
-            ) : (
-              <Play className="h-4 w-4 ml-0.5" />
-            )}
+          <Button onClick={handlePlayPause} variant="default">
+            {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
           </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={nextTrack}
-            className="text-muted-foreground hover:text-foreground"
-          >
+          <Button onClick={playNext} variant="ghost">
             <SkipForward className="h-4 w-4" />
           </Button>
-
           <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleRepeatToggle}
-            className={cn(
-              'text-muted-foreground hover:text-foreground',
-              repeatMode !== 'none' && 'text-primary'
-            )}
+            onClick={toggleRepeatMode}
+            variant={repeatMode !== "none" ? "default" : "ghost"}
           >
-            <Repeat className="h-4 w-4" />
-            {repeatMode === 'one' && (
-              <span className="absolute -top-1 -right-1 text-xs">1</span>
+            {repeatMode === "one" ? (
+              <Repeat1 className="h-4 w-4" />
+            ) : (
+              <Repeat className="h-4 w-4" />
             )}
           </Button>
         </div>
 
-        {/* Progress Bar */}
+        {/* Progress */}
         <div className="flex items-center w-full space-x-2">
-          <span className="text-xs text-muted-foreground w-10 text-right">
-            {formatTime(currentTime)}
-          </span>
+          <span className="text-xs w-10 text-right">{formatTime(currentTime)}</span>
           <Slider
             value={[currentTime]}
             max={duration || 100}
             step={1}
             onValueChange={handleSeek}
-            className="flex-1"
           />
-          <span className="text-xs text-muted-foreground w-10">
-            {formatTime(duration)}
-          </span>
+          <span className="text-xs w-10">{formatTime(duration)}</span>
         </div>
       </div>
 
       {/* Volume */}
       <div className="flex items-center w-1/4 justify-end space-x-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={toggleMute}
-          className="text-muted-foreground hover:text-foreground"
-        >
+        <Button onClick={toggleMute} variant="ghost">
           {isMuted || volume === 0 ? (
             <VolumeX className="h-4 w-4" />
           ) : (

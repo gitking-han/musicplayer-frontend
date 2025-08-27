@@ -1,23 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search as SearchIcon, Play, Heart, MoreHorizontal } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { useMusic } from '@/contexts/MusicContext';
-import album1 from '@/assets/album1.jpg';
-import album2 from '@/assets/album2.jpg';
-import album3 from '@/assets/album3.jpg';
+import { Input } from '../components/ui/input';
+import { Button } from '../components/ui/button';
+import { Card } from '../components/ui/card';
+import { useMusic } from '../contexts/MusicContext';
 
 const Search = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const { playTrack } = useMusic();
+  const [searchResults, setSearchResults] = useState([]);
+  const { playSong } = useMusic();
 
-  // Mock search results
-  const searchResults = searchQuery ? [
-    { id: '1', title: 'Neon Dreams', artist: 'Electric Pulse', album: 'Digital Horizons', duration: 210, cover: album1 },
-    { id: '2', title: 'Sunset Boulevard', artist: 'Indie Collective', album: 'Golden Hour', duration: 195, cover: album2 },
-    { id: '3', title: 'Bass Drop', artist: 'HyperBeat', album: 'Electronic Revolution', duration: 230, cover: album3 },
-  ] : [];
+  // Fetch all songs from backend
+  useEffect(() => {
+    const fetchSongs = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/api/songs'); // update your API endpoint
+        const data = await res.json();
+        setSearchResults(data);
+      } catch (err) {
+        console.error('Error fetching songs:', err);
+      }
+    };
+    fetchSongs();
+  }, []);
+
+  // Filter songs based on search query
+  const filteredResults = searchQuery
+    ? searchResults.filter((track) =>
+        track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        track.artist.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        track.album.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : [];
+
+  const handlePlayTrack = (track) => {
+    playSong(track, filteredResults); // play track and set filtered list as playlist
+  };
 
   const browseCategories = [
     { id: '1', name: 'Pop', color: 'bg-gradient-to-br from-pink-400 to-purple-600' },
@@ -27,10 +45,6 @@ const Search = () => {
     { id: '5', name: 'Jazz', color: 'bg-gradient-to-br from-yellow-400 to-orange-600' },
     { id: '6', name: 'Classical', color: 'bg-gradient-to-br from-indigo-400 to-purple-600' },
   ];
-
-  const handlePlayTrack = (track) => {
-    playTrack(track, searchResults);
-  };
 
   return (
     <div className="p-6 space-y-8">
@@ -52,48 +66,52 @@ const Search = () => {
         <section>
           <h2 className="text-2xl font-bold mb-6">Search Results</h2>
           <div className="space-y-2">
-            {searchResults.map((track) => (
-              <div
-                key={track.id}
-                className="group flex items-center space-x-4 p-3 rounded-lg hover:bg-glass/30 transition-all duration-300 cursor-pointer"
-                onClick={() => handlePlayTrack(track)}
-              >
-                <div className="relative">
-                  <img
-                    src={track.cover}
-                    alt={track.album}
-                    className="h-12 w-12 rounded-md object-cover"
-                  />
-                  <Button
-                    size="sm"
-                    className="absolute inset-0 h-12 w-12 rounded-md bg-black/60 hover:bg-black/80 opacity-0 group-hover:opacity-100 transition-all duration-300"
-                  >
-                    <Play className="h-4 w-4 ml-0.5 text-white" />
-                  </Button>
+            {filteredResults.length > 0 ? (
+              filteredResults.map((track) => (
+                <div
+                  key={track._id}
+                  className="group flex items-center space-x-4 p-3 rounded-lg hover:bg-glass/30 transition-all duration-300 cursor-pointer"
+                  onClick={() => handlePlayTrack(track)}
+                >
+                  <div className="relative">
+                    <img
+                      src={track.coverUrl || '/placeholder.svg'}
+                      alt={track.album}
+                      className="h-12 w-12 rounded-md object-cover"
+                    />
+                    <Button
+                      size="sm"
+                      className="absolute inset-0 h-12 w-12 rounded-md bg-black/60 hover:bg-black/80 opacity-0 group-hover:opacity-100 transition-all duration-300"
+                    >
+                      <Play className="h-4 w-4 ml-0.5 text-white" />
+                    </Button>
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-foreground truncate">{track.title}</h4>
+                    <p className="text-sm text-muted-foreground truncate">{track.artist}</p>
+                  </div>
+                  
+                  <div className="hidden md:block text-sm text-muted-foreground">
+                    {track.album}
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-all duration-300">
+                      <Heart className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm text-muted-foreground w-12 text-right">
+                      {Math.floor(track.duration / 60)}:{(track.duration % 60).toString().padStart(2, '0')}
+                    </span>
+                    <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-all duration-300">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-                
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-foreground truncate">{track.title}</h4>
-                  <p className="text-sm text-muted-foreground truncate">{track.artist}</p>
-                </div>
-                
-                <div className="hidden md:block text-sm text-muted-foreground">
-                  {track.album}
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-all duration-300">
-                    <Heart className="h-4 w-4" />
-                  </Button>
-                  <span className="text-sm text-muted-foreground w-12 text-right">
-                    {Math.floor(track.duration / 60)}:{(track.duration % 60).toString().padStart(2, '0')}
-                  </span>
-                  <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-all duration-300">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p>No results found</p>
+            )}
           </div>
         </section>
       )}
